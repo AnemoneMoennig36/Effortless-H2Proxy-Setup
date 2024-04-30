@@ -18,9 +18,9 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
 system_identification
 
-if download_packeg socat; then
+if download_package socat; then
     download_results socat 0
-    if download_packeg git; then
+    if download_package git; then
         download_results git 0
     else
         download_results git 1
