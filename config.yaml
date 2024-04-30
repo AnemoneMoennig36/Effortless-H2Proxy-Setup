@@ -1,0 +1,68 @@
+listen: :443
+
+tls:
+  cert: /etc/hysteria/server.crt
+  key: /etc/hysteria/server.key
+
+
+quic:
+  initStreamReceiveWindow: 8388608
+  maxStreamReceiveWindow: 8388608
+  initConnReceiveWindow: 20971520
+  maxConnReceiveWindow: 20971520
+  maxIdleTimeout: 30s
+  maxIncomingStreams: 1024
+  disablePathMTUDiscovery: false
+
+bandwidth:
+  up: 300 mbps
+  down: 100 mbps
+
+disableUDP: false
+
+udpIdleTimeout: 120s
+
+auth:
+  type: password
+  password: your_password
+  userpass: 
+    user1: pass1
+    user2: pass2
+    user3: pass3
+  http:
+    url: http://your.backend.com/auth 
+    insecure: false 
+  command: /etc/some_command 
+  
+resolver:
+  type: udp
+  tcp:
+    addr: 8.8.8.8:53
+    timeout: 4s
+  udp:
+    addr: 8.8.4.4:53
+    timeout: 4s
+  tls:
+    addr: 1.1.1.1:853
+    timeout: 10s
+    sni: cloudflare-dns.com
+    insecure: false
+  https:
+    addr: 1.1.1.1:443
+    timeout: 10s
+    sni: cloudflare-dns.com
+    insecure: false
+
+masquerade:
+  type: string
+  file:
+    dir: /www/masq/index.html 
+  proxy:
+    url: https://github.com/AnemoneMoennig36/Effortless-H2Proxy-Setup
+    rewriteHost: true 
+  string:
+    content: hello stupid world 
+    headers: 
+      content-type: text/plain
+      custom-stuff: ice cream so good
+    statusCode: 200
