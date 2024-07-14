@@ -26,13 +26,13 @@ auth:
   type: password
   password: your_password
   userpass: 
-    user1: pass1
-    user2: pass2
-    user3: pass3
+    password1: your_password
+    password2: your_password
+    password3: your_password
   http:
     url: http://your.backend.com/auth 
     insecure: false 
-  command: /etc/some_command 
+  command: /etc/some_command
   
 resolver:
   type: udp

@@ -89,17 +89,16 @@ mv "${config_path}" "${new_path}" || { echo "Failed to move config.yaml."; exit 
 #if want to change file name, use "${new_path}"/new_name.yaml
 
 cp "${script_dir}/config.yaml" "${config_path}" || { echo "Failed to copy config.yaml."; exit 1; }
+firewall-cmd --add-port=443/tcp --permanent
+firewall-cmd --add-port=443/udp --permanent
 
-hysteria server -c "${config_path}"
-if [ $? -eq 0 ]; then
-    setcap cap_net_bind_service=+ep /usr/local/bin/hysteria
-    echo "enable hysteria-server.service"
-    systemctl enable hysteria-server.service
-    echo "Check status of hysteria-server.service"
-    systemctl status hysteria-server.service
-else
-    echo "Failed to test ${config_path}."
-    exit 1
+systemctl restart firewalld.service
+
+if systemctl enable hysteria-server.service; then
+    chmod 644 /etc/hysteria/server.key
+    systemctl restart hysteria-server.service
 fi
 
+firewall-cmd --permanent --remove-port=80/tcp
 echo "Installation comleted."
+exit 0
