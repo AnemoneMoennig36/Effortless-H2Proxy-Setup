@@ -56,15 +56,37 @@ function download_results {
 
 function open_port {
     local port=$1
+    local protocol=${2:-tcp}  # 默认协议是 TCP
+
     case $firewall_tool in
         firewalld)
-            echo "Using firewalld to allow port $port"
-            firewall-cmd --add-port=${port}/tcp --permanent
-            firewall-cmd --reload
+            echo "Using firewalld to check port $port/$protocol..."
+            if firewall-cmd --list-ports | grep -q "${port}/${protocol}"; then
+                echo "Port $port/$protocol is already open."
+            else
+                echo "Opening port $port/$protocol..."
+                if firewall-cmd --add-port=${port}/${protocol} --permanent; then
+                    firewall-cmd --reload
+                    echo "Port $port/$protocol opened successfully."
+                else
+                    echo "Failed to open port $port/$protocol."
+                    return 1
+                fi
+            fi
             ;;
         ufw)
-            echo "Using ufw to allow port $port"
-            ufw allow ${port}/tcp
+            echo "Using ufw to check port $port/$protocol..."
+            if ufw status | grep -q "${port}/${protocol}"; then
+                echo "Port $port/$protocol is already open."
+            else
+                echo "Opening port $port/$protocol..."
+                if ufw allow ${port}/${protocol}; then
+                    echo "Port $port/$protocol opened successfully."
+                else
+                    echo "Failed to open port $port/$protocol."
+                    return 1
+                fi
+            fi
             ;;
         *)
             echo "No supported firewall tool found."
@@ -75,52 +97,72 @@ function open_port {
 
 function acme_register {
     local email=$1
-    if ./acme.sh --register-account -m "$email"; then
-        echo "Account registered successfully."
+
+    # 确保 acme.sh 可用
+    ACME_PATH=$(type -P acme.sh || which acme.sh)
+    if [ -z "$ACME_PATH" ]; then
+        if [ -f "$HOME/.acme.sh/acme.sh" ]; then
+            ACME_PATH="$HOME/.acme.sh/acme.sh"
+        elif [ -f "/root/.acme.sh/acme.sh" ]; then
+            ACME_PATH="/root/.acme.sh/acme.sh"
+        else
+            echo "❌ acme.sh not found. Exiting."
+            return 1
+        fi
+    fi
+
+    # 获取当前 CA 域名
+    local default_ca=$("$ACME_PATH" --list-ca | grep "DEFAULT_CA" | awk '{print $NF}' | sed -E 's|https://([^/]+)/.*|\1|')
+
+    # 确保 default_ca 不是空的
+    if [ -z "$default_ca" ]; then
+        echo "❌ Failed to detect default CA. Exiting."
+        return 1
+    fi
+
+    # 计算 account.conf 的路径
+    local acme_account_file="$HOME/.acme.sh/ca/${default_ca}/account.conf"
+
+    # 检查账户是否已注册
+    if [ -f "$acme_account_file" ]; then
+        echo "✅ ACME account already registered with CA: $default_ca. Skipping registration."
+        return 0
+    fi
+
+    # 账户未注册，执行注册
+    if "$ACME_PATH" --register-account -m "$email"; then
+        echo "✅ Account registered successfully with CA: $default_ca."
+        return 0
     else
-        echo "Failed to register account."
+        echo "❌ Failed to register account with CA: $default_ca."
+        return 1
     fi
 }
 
 function prompt_for_email {
-    email=${MY_EMAIL}
-    if [[ -z "$email" ]]; then
-        if read -t 300 -p "Please enter your email: " email; then
-            echo "$email"
-        else
-            echo "Sorry, too slow!" >&2
-            return 1
-        fi
-    else
+    if read -t 300 -p "Please enter your email: " email; then
         echo "$email"
+    else
+        echo "Sorry, too slow!" >&2
+        return 1
     fi
 }
 
 function prompt_for_domain {
-    domain=${MY_DOMAIN}
-    if [[ -z "$domain" ]]; then
-        if read -t 300 -p "Please enter your domain: " domain; then
-            echo "$domain"
-        else
-            echo "Sorry, too slow!" >&2
-            return 1
-        fi
-    else
+    if read -t 300 -p "Please enter your domain: " domain; then
         echo "$domain"
+    else
+        echo "Sorry, too slow!" >&2
+        return 1
     fi
 }
 
 function prompt_for_password {
-    password=${MY_PASSWORD}
-    if [[ -z "$password" ]]; then
-        if read -t 300 -p "Please enter your password: " password; then
-            echo "$password"
-        else
-            echo "Sorry, too slow!" >&2
-            return 1
-        fi
-    else
+    if read -t 300 -p "Please enter your password: " password; then
         echo "$password"
+    else
+        echo "Sorry, too slow!" >&2
+        return 1
     fi
 }
 
@@ -140,10 +182,21 @@ function switch_ca {
 
 function acme_issue {
     local domain=$1 
+    local ca_servers=("letsencrypt" "buypass" "zerossl")
+
+    # 遍历所有可能的 CA 证书存储路径
+    for ca in "${ca_servers[@]}"; do
+        if [ -f "/root/.acme.sh/${domain}_${ca}_ecc/fullchain.cer" ]; then
+            echo "SSL certificate for $domain already exists with CA: $ca. Skipping issuance."
+            return 0  # 直接返回，不再申请
+        fi
+    done
+
+    # 证书不存在，开始申请
     if ./acme.sh --issue -d "$domain" --standalone -k ec-256; then
         echo "Certificate issued successfully."
     else
-        echo "Change default certificate authority"
+        echo "Changing default certificate authority..."
         switch_ca 
     fi
 }
