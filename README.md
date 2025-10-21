@@ -29,7 +29,7 @@ nano config.sh
 
 ### 三、第三步
 ```sh
-bush main.sh 
+bash main.sh 
 ```
 如果跳过第二步,此时需要根据提示输入邮箱、域名和密码.  
 脚本会自动运行,运行结束看到 Installation completed. 后  
