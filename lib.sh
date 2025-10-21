@@ -1,3 +1,5 @@
+ACME_BIN="$HOME/.acme.sh/acme.sh"
+
 function system_identification {
     if command -v dnf >/dev/null 2>&1; then
         export pkg_manager="dnf"
@@ -97,18 +99,11 @@ function open_port {
 
 function acme_register {
     local email=$1
+    local ACME_PATH="$ACME_BIN"
 
-    # 确保 acme.sh 可用
-    ACME_PATH=$(type -P acme.sh || which acme.sh)
-    if [ -z "$ACME_PATH" ]; then
-        if [ -f "$HOME/.acme.sh/acme.sh" ]; then
-            ACME_PATH="$HOME/.acme.sh/acme.sh"
-        elif [ -f "/root/.acme.sh/acme.sh" ]; then
-            ACME_PATH="/root/.acme.sh/acme.sh"
-        else
-            echo "❌ acme.sh not found. Exiting."
-            return 1
-        fi
+    if [ ! -x "$ACME_PATH" ]; then
+        echo "❌ acme.sh not found or not executable at $ACME_PATH"
+        return 1
     fi
 
     # 获取当前 CA 域名
@@ -169,7 +164,7 @@ function prompt_for_password {
 function switch_ca {
     local ca_servers=("letsencrypt" "buypass" "zerossl")
     for ca_server in "${ca_servers[@]}"; do
-        if ./acme.sh --set-default-ca --server "$ca_server"; then
+        if "$ACME_BIN" --set-default-ca --server "$ca_server"; then
             echo "${ca_server} executed successfully, exiting loop."
             return 0
         else
@@ -193,7 +188,7 @@ function acme_issue {
     done
 
     # 证书不存在，开始申请
-    if ./acme.sh --issue -d "$domain" --standalone -k ec-256; then
+    if "$ACME_BIN" --issue -d "$domain" --standalone -k ec-256; then
         echo "Certificate issued successfully."
     else
         echo "Changing default certificate authority..."
