@@ -41,8 +41,8 @@ systemctl status hysteria-server.service
 <br>
 <br>
 ## 其他可能的问题：
-都弄好了还是连不上？
-1.客户端混淆选项不要填东西
+都弄好了还是连不上？ <br>
+1.客户端混淆选项不要填东西 <br>
 2.重设 Hysteria 运行用户为 root：
 ```sh
 systemctl edit hysteria-server
