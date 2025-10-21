@@ -9,9 +9,10 @@ Effortlessly set up a secure proxy with Hysteria2 and automate SSL certification
 ### 一、第一步  
 复制代码到你的服务器并按回车:
 ```sh
+sudo dnf install -y git && \
 git clone https://github.com/AnemoneMoennig36/Effortless-H2Proxy-Setup.git && \
 cd Effortless-H2Proxy-Setup && \
-cp config.example.sh config.sh && \
+cp config.example.sh config.sh
 ```
 ### 二、第二步 (可跳过)  
 编辑config.sh文件  
