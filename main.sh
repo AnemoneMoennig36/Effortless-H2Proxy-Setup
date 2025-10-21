@@ -63,23 +63,6 @@ fi
 
 #!/bin/bash
 
-# 统一拿 acme.sh 路径（优先现成命令，否则用默认目录）
-ACME_BIN="$(command -v acme.sh || true)"
-[ -z "$ACME_BIN" ] && [ -x "$HOME/.acme.sh/acme.sh" ] && ACME_BIN="$HOME/.acme.sh/acme.sh"
-
-# 如果还没有，就安装
-if [ -z "$ACME_BIN" ]; then
-  echo "acme.sh not found. Installing..."
-  git clone https://github.com/acmesh-official/acme.sh.git "$HOME/.acme.sh" || { echo "clone acme.sh failed"; exit 1; }
-  chmod +x "$HOME/.acme.sh/acme.sh"
-  ACME_BIN="$HOME/.acme.sh/acme.sh"
-  # 注册账号（只需一次）
-  "$ACME_BIN" --register-account -m "$MY_EMAIL" || { echo "acme.sh register failed"; exit 1; }
-fi
-
-# 确认能执行
-"$ACME_BIN" --version || { echo "acme.sh not runnable"; exit 1; }
-
 open_port 80
 
 email=${MY_EMAIL}
@@ -92,7 +75,7 @@ if [ $? -eq 0 ]; then
     echo "Download hystera2..."
     download_hy2
     echo "Install certificate..."
-    sudo ./acme.sh --installcert -d "$domain" --ecc  --key-file    /etc/hysteria/server.key   --fullchain-file /etc/hysteria/server.crt
+    sudo "$ACME_BIN" --installcert -d "$domain" --ecc  --key-file    /etc/hysteria/server.key   --fullchain-file /etc/hysteria/server.crt
 else
     echo "Failed to process domain."
     exit 1
@@ -129,6 +112,5 @@ else
     exit 1
 fi
 
-firewall-cmd --permanent --remove-port=80/tcp
 echo "Installation completed."
 exit 0
