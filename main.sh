@@ -63,45 +63,22 @@ fi
 
 #!/bin/bash
 
-# 1️⃣ 先尝试查找 acme.sh
-ACME_PATH=$(type -P acme.sh || which acme.sh)
+# 统一拿 acme.sh 路径（优先现成命令，否则用默认目录）
+ACME_BIN="$(command -v acme.sh || true)"
+[ -z "$ACME_BIN" ] && [ -x "$HOME/.acme.sh/acme.sh" ] && ACME_BIN="$HOME/.acme.sh/acme.sh"
 
-# 如果找不到 acme.sh，尝试使用默认安装路径
-if [ -z "$ACME_PATH" ]; then
-    if [ -f "$HOME/.acme.sh/acme.sh" ]; then
-        ACME_PATH="$HOME/.acme.sh/acme.sh"
-    elif [ -f "/root/.acme.sh/acme.sh" ]; then
-        ACME_PATH="/root/.acme.sh/acme.sh"
-    else
-        echo "❌ acme.sh not found. Exiting."
-        exit 1
-    fi
+# 如果还没有，就安装
+if [ -z "$ACME_BIN" ]; then
+  echo "acme.sh not found. Installing..."
+  git clone https://github.com/acmesh-official/acme.sh.git "$HOME/.acme.sh" || { echo "clone acme.sh failed"; exit 1; }
+  chmod +x "$HOME/.acme.sh/acme.sh"
+  ACME_BIN="$HOME/.acme.sh/acme.sh"
+  # 注册账号（只需一次）
+  "$ACME_BIN" --register-account -m "$MY_EMAIL" || { echo "acme.sh register failed"; exit 1; }
 fi
 
-# 3️⃣ 如果 acme.sh 仍然找不到，检查是否应该安装或更新
-if [ -z "$ACME_PATH" ]; then
-    if [ -d "$HOME/.acme.sh" ] && [ -f "$HOME/.acme.sh/acme.sh" ]; then
-        echo "acme.sh is already installed. Updating..."
-        cd "$HOME/.acme.sh" && git pull || { echo "Failed to update acme.sh."; exit 1; }
-    else
-        echo "acme.sh is not installed. Installing now..."
-        git clone https://github.com/acmesh-official/acme.sh.git "$HOME/.acme.sh" || { echo "Failed to clone acme.sh."; exit 1; }
-        ACME_PATH="$HOME/.acme.sh/acme.sh"
-        chmod +x "$ACME_PATH"
-    fi
-fi
-
-# 4️⃣ 确保 acme.sh 现在可以执行
-"$ACME_PATH" --version
-
-chmod -R 700 "$HOME/.acme.sh"
-
-if [ ! -d "./acme.sh" ]; then
-    echo "acme.sh directory does not exist. Exiting."
-    exit 1
-fi
-cd ./acme.sh || exit 1
-chmod +x acme.sh
+# 确认能执行
+"$ACME_BIN" --version || { echo "acme.sh not runnable"; exit 1; }
 
 open_port 80
 
